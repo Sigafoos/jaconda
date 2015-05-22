@@ -38,6 +38,12 @@ $app->group('/' . KEY, function () use ($app)
 			send_curl(format_url($app), $message);
 			});
 
+		$app->post('/countdown/:title/:date', function ($title, $date) use ($app)
+			{
+				$days = 2;
+				send_curl(format_url($app), 'Only ' . $days . ' days until ' . $title . '!');
+			});
+
 		});
 
 $app->run();
