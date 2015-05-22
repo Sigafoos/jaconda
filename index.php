@@ -9,15 +9,33 @@ function format_url($app)
 	$group_id = $app->request->params('group_id');
 	if (!is_numeric($group_id))
 	{
-		throw new Exception('Bad/empty group_id');
+		ob_start();
+		var_dump($app->request);
+		$dump = ob_get_contents();
+		ob_end_clean();
+		email_log($dump, 1, 'dan.j.conley@gmail.com', 'From:jaconda@danconley.net');
 	}
 	return 'https://jaconda.im/api/v1/endpoint/groups/' . $group_id . '/messages?token=' . TOKEN . '&text=';
 }
 
+function email_log($log)
+{
+	error_log($log, 1, 'dan.j.conley@gmail.com', 'From:jaconda@danconley.net');
+}
+
 function send_curl($url, $text)
 {
-	$ch = curl_init($url . urlencode($text));
-	curl_exec($ch);
+	$text = urlencode($text);
+	$ch = curl_init($url . $text);
+	if (!$ch)
+	{
+		email_log('curl_init() failed with url ' . $url . $text);
+	}
+	if (!curl_exec($ch))
+	{
+		$error = 'Error with url ' . $url . ' and text /' . $text . '/';
+		email_log($error, 1, 'dan.j.conley@gmail.com', 'From: jaconda@danconley.net');
+	}
 }
 	
 $app->group('/' . KEY, function () use ($app)
@@ -38,11 +56,18 @@ $app->group('/' . KEY, function () use ($app)
 			send_curl(format_url($app), $message);
 			});
 
-		$app->post('/countdown/:title/:date', function ($title, $date) use ($app)
+		$app->get('/countdown/:title/:date', function ($title, $date) use ($app)
 			{
-				$days = 2;
-				send_curl(format_url($app), 'Only ' . $days . ' days until ' . $title . '!');
+			echo 'please use post';
 			});
+
+		$app->post('/countdown/:title/:date', function ($title, $date) use ($app)
+		{
+			$date = new DateTime(date('Y-m-d', strtotime($date)), new DateTimeZone('America/New_York'));
+			$days = $date->diff(new DateTime('now', new DateTimeZone('America/New_York')));
+			$message = 'Only ' . $days->days . ' days until ' . urldecode($title) . '!';
+			send_curl(format_url($app), $message);
+		});
 
 		});
 
